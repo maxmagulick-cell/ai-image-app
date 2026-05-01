@@ -1,44 +1,33 @@
-import os
 import json
 import base64
 import streamlit as st
-from dotenv import load_dotenv
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
 
 # ---------------------------
-# Load environment variables
+# Load secrets (for deployment)
 # ---------------------------
-load_dotenv()
-endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-model_deployment = os.getenv("MODEL_DEPLOYMENT")
+endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
+api_key = st.secrets["AZURE_OPENAI_KEY"]
+model_deployment = st.secrets["MODEL_DEPLOYMENT"]
 
 # ---------------------------
-# Azure Authentication
+# Initialize OpenAI client
 # ---------------------------
-token_provider = get_bearer_token_provider(
-    DefaultAzureCredential(
-        exclude_environment_credential=True,
-        exclude_managed_identity_credential=True
-    ),
-    "https://cognitiveservices.azure.com/.default"
-)
-
 client = OpenAI(
+    api_key=api_key,
     base_url=endpoint,
-    api_key=token_provider(),
 )
 
 # ---------------------------
-# Streamlit UI Config
+# Streamlit UI setup
 # ---------------------------
 st.set_page_config(page_title="AI Image Generator", layout="centered")
 
 st.title("🚀 AI Image Generator")
-st.markdown("Generate high-quality AI images using Azure OpenAI")
+st.markdown("Generate high-quality AI images using Azure OpenAI (Foundry)")
 
 # ---------------------------
-# Sidebar Controls
+# Sidebar controls
 # ---------------------------
 with st.sidebar:
     st.header("⚙️ Settings")
@@ -53,16 +42,16 @@ with st.sidebar:
         ["Studio", "Neon", "Natural", "Dark", "Golden Hour"]
     )
 
-    enhance_prompt = st.toggle("✨ Enhance Prompt (AI)")
+    enhance_prompt = st.toggle("✨ Enhance Prompt")
 
 # ---------------------------
-# Session State for History
+# Session state for history
 # ---------------------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
 # ---------------------------
-# Prompt Input
+# Prompt input
 # ---------------------------
 st.markdown("### ✍️ Enter your idea")
 prompt = st.text_input(
@@ -71,15 +60,15 @@ prompt = st.text_input(
 )
 
 # ---------------------------
-# Prompt Enhancer Function
+# Prompt enhancer (optional)
 # ---------------------------
 def enhance_user_prompt(user_prompt):
     try:
         response = client.chat.completions.create(
             model="gpt-4.1-mini",
             messages=[
-                {"role": "system", "content": "You are an expert prompt engineer for AI image generation."},
-                {"role": "user", "content": f"Improve this prompt for high-quality image generation: {user_prompt}"}
+                {"role": "system", "content": "You improve prompts for high-quality AI image generation."},
+                {"role": "user", "content": user_prompt}
             ],
             max_tokens=100
         )
@@ -88,12 +77,13 @@ def enhance_user_prompt(user_prompt):
         return user_prompt
 
 # ---------------------------
-# Generate Image
+# Generate image
 # ---------------------------
 if st.button("🎨 Generate Image") and prompt:
 
-    # Enhance prompt if enabled
     final_prompt = prompt
+
+    # Enhance prompt if enabled
     if enhance_prompt:
         with st.spinner("Enhancing prompt..."):
             final_prompt = enhance_user_prompt(prompt)
@@ -134,7 +124,7 @@ if st.button("🎨 Generate Image") and prompt:
         st.error(f"Error: {e}")
 
 # ---------------------------
-# Image History Section
+# Image history
 # ---------------------------
 if st.session_state.history:
     st.markdown("---")
@@ -150,6 +140,4 @@ if st.session_state.history:
 # Footer
 # ---------------------------
 st.markdown("---")
-st.markdown(
-    "Built with Azure OpenAI (Foundry) + Streamlit | Portfolio Project"
-)
+st.markdown("Built with Azure OpenAI (Foundry) + Streamlit")
